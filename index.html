@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <!--
     If you are serving your web app in a path other than the root, change the
@@ -18,34 +18,159 @@
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="dater - date planning app">
-
-  <!-- iOS meta tags & icons -->
+  
+  <!-- PWA Meta Tags -->
+  <meta name="description" content="dater - Plan and organize dates with friends">
+  <meta name="theme-color" content="#0175C2">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="dater">
-  <link rel="apple-touch-icon" href="icons/Icon-192.png">
-
-  <!-- Favicon -->
-  <link rel="icon" type="image/png" href="favicon.png"/>
-
-  <title>dater</title>
+  <meta name="application-name" content="dater">
+  <meta name="msapplication-TileColor" content="#0175C2">
+  <meta name="msapplication-tap-highlight" content="no">
+  
+  <!-- PWA Link Tags -->
   <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+  <link rel="apple-touch-icon" sizes="192x192" href="icons/Icon-192.png">
+  <link rel="apple-touch-icon" sizes="512x512" href="icons/Icon-512.png">
+  
+  <!-- Preconnect to external resources for performance -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  
+  <!-- Splash screen styles for iOS -->
+  <style>
+    html, body {
+      background-color: #0175C2;
+    }
+    
+    /* iOS splash screen */
+    @media (orientation: portrait) {
+      body::after {
+        content: '';
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: #0175C2;
+        z-index: -1;
+      }
+    }
+  </style>
+
+  <title>dater - Date Planning App</title>
 </head>
 <body>
   <script src="flutter_bootstrap.js" async></script>
 
   <!-- Register custom service worker (replaces Flutter's deprecated one) -->
   <script>
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', function () {
-        navigator.serviceWorker.register('/service-worker.js').then(function (reg) {
-          console.log('[PWA] Service worker registered, scope:', reg.scope);
-        }).catch(function (err) {
-          console.warn('[PWA] Service worker registration failed:', err);
+    (function() {
+      'use strict';
+      
+      // Service Worker Registration
+      if ('serviceWorker' in navigator) {
+        // Wait for the page to fully load
+        window.addEventListener('load', function() {
+          navigator.serviceWorker.register('/service-worker.js')
+            .then(function(registration) {
+              console.log('[PWA] Service worker registered:', registration.scope);
+              
+              // Check for updates
+              registration.addEventListener('updatefound', function() {
+                const newWorker = registration.installing;
+                newWorker.addEventListener('statechange', function() {
+                  if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                    // New content is available, show update prompt
+                    console.log('[PWA] New content available, refresh to update');
+                    showUpdateNotification();
+                  }
+                });
+              });
+            })
+            .catch(function(err) {
+              console.warn('[PWA] Service worker registration failed:', err);
+            });
         });
+        
+        // Handle service worker messages
+        navigator.serviceWorker.addEventListener('message', function(event) {
+          if (event.data && event.data.type === 'CACHE_CLEARED') {
+            console.log('[PWA] Cache cleared, refreshing...');
+            window.location.reload();
+          }
+        });
+      }
+      
+      // Show update notification
+      function showUpdateNotification() {
+        // Create a simple update banner
+        const banner = document.createElement('div');
+        banner.id = 'pwa-update-banner';
+        banner.innerHTML = 'A new version is available. <button id="pwa-update-btn">Update</button>';
+        banner.style.cssText = `
+          position: fixed;
+          bottom: 20px;
+          left: 50%;
+          transform: translateX(-50%);
+          background: #0175C2;
+          color: white;
+          padding: 12px 24px;
+          border-radius: 8px;
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+          font-size: 14px;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+          z-index: 9999;
+          display: flex;
+          align-items: center;
+          gap: 12px;
+        `;
+        
+        const btn = banner.querySelector('#pwa-update-btn');
+        btn.style.cssText = `
+          background: white;
+          color: #0175C2;
+          border: none;
+          padding: 6px 16px;
+          border-radius: 4px;
+          cursor: pointer;
+          font-weight: 600;
+        `;
+        
+        btn.addEventListener('click', function() {
+          window.location.reload();
+        });
+        
+        document.body.appendChild(banner);
+      }
+      
+      // Register for background sync if supported
+      if ('sync' in window.ServiceWorkerRegistration.prototype) {
+        console.log('[PWA] Background Sync supported');
+      }
+      
+      // Check for standalone mode (installed PWA)
+      if (window.matchMedia('(display-mode: standalone)').matches) {
+        document.documentElement.classList.add('pwa-standalone');
+        console.log('[PWA] Running in standalone mode');
+      }
+      
+      // Handle online/offline events
+      window.addEventListener('online', function() {
+        console.log('[PWA] Back online');
+        document.body.classList.remove('offline');
       });
-    }
+      
+      window.addEventListener('offline', function() {
+        console.log('[PWA] Gone offline');
+        document.body.classList.add('offline');
+      });
+    })();
   </script>
 </body>
 </html>
